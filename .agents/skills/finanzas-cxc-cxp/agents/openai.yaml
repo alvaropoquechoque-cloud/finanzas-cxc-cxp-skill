@@ -1,0 +1,8 @@
+interface:
+  display_name: "Finanzas Sommos — CxC y CxP"
+  short_description: "Gestiona cuentas por cobrar, cuentas por pagar, grants y obligaciones recurrentes de Sommos."
+  brand_color: "#4D0B95"
+  default_prompt: "Usa $finanzas-cxc-cxp para registrar, revisar o proyectar CxC y CxP de Sommos sin confundir compromisos con caja realizada."
+
+policy:
+  allow_implicit_invocation: true
