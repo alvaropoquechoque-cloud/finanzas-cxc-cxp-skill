@@ -1,138 +1,149 @@
 # Cuentas por pagar — CxP
 
-Antes de actuar, leer `Transacciones` y `CxP` en vivo.
+## Fuente de verdad
 
-## Regla principal
+La fuente operativa principal es `Transacciones`.
 
-`Egreso + Pendiente` en `Transacciones` genera una CxP.
+Una cuenta por pagar existe cuando una transacción cumple:
 
-Una obligación pendiente no afecta bancos ni burn realizado.
+- Tipo = `Egreso`
+- Estado pago = `Pendiente`
 
-## Obligaciones conocidas
+La vista principal para control es:
 
-### PPO
+- `CxP Mensual`
 
-Monto mensual:
-- USD 545.97
+Para obligaciones laborales también existe:
 
-Regla:
-- gasto recurrente mensual
-- se paga al final del mes siguiente
+- `CxP Sueldos`
 
-Deudas documentadas:
-- junio 2026 — USD 545.97 — vencimiento no definido
-- julio 2026 — USD 545.97 — pago 31/08/2026
-- agosto 2026 — USD 545.97 — pago 30/09/2026
+La antigua pestaña `CxP` fue eliminada y no debe volver a utilizarse como fuente.
 
-### Big Picture
+---
 
-Monto mensual:
-- BOB 1,110
+## Principio contable
 
-Regla:
-- recurrente mensual
-- pago al final del mes siguiente
+Una obligación pendiente no representa todavía una salida de caja.
 
-### Ronny Sommos
+Por lo tanto:
 
-Monto mensual:
-- USD 858.50
+- `Pendiente` → forma parte de CxP.
+- `Pagado/Cobrado` → deja de formar parte de CxP.
+- Solo los movimientos realizados afectan bancos y burn real.
 
-Regla:
-- recurrente mensual
-- pago al final del mes siguiente
+Nunca crear una segunda transacción para registrar el pago de una obligación ya existente.
 
-### Caja Nacional de Salud
+Cuando se paga:
 
-Monto mensual:
-- BOB 414.12
+1. localizar la transacción original;
+2. cambiar su estado a `Pagado/Cobrado`;
+3. registrar `Fecha pago / cobro`;
+4. completar cuenta bancaria si corresponde;
+5. conciliar contra el extracto.
 
-Regla:
-- recurrente mensual
-- pago al final del mes siguiente
+---
 
-### Gestora
+## CxP Mensual
 
-Monto mensual:
-- BOB 824.93
+`CxP Mensual` es la vista de control visual.
 
-Regla:
-- recurrente mensual
-- pago al final del mes siguiente
+Cada proveedor u obligación tiene un bloque con:
 
-### ChatGPT
+- Monto a pagar
+- Pago
+- Saldo
 
-Monto mensual de referencia:
-- USD 24.64
+Los meses avanzan horizontalmente de enero a diciembre.
 
-Regla:
-- recurrente mensual
-- pago automático
-- no inventar día de pago si no está documentado
+### Histórico 2026
 
-### Microsoft
+Los meses enero–agosto contienen histórico cargado desde los archivos financieros fuente de Sommos.
 
-Monto mensual de referencia:
-- USD 14.70
+No modificar ese histórico sin confirmación explícita.
 
-Regla:
-- recurrente mensual
-- pago automático
+Desde septiembre 2026 en adelante, la vista debe alimentarse principalmente desde `Transacciones`.
 
-### Claude
+---
 
-Monto mensual de referencia:
-- USD 21.20
+## Fecha de reconocimiento
 
-Regla:
-- recurrente mensual
-- pago automático
+Para obligaciones pendientes:
 
-### Udemy
+- usar `Fecha vencimiento` para determinar el mes esperado de pago;
+- si no existe vencimiento documentado, no inventarlo.
 
-Monto mensual:
-- USD 19.00
+Para obligaciones pagadas:
 
-Regla:
-- recurrente mensual
-- pago automático
+- usar `Fecha pago / cobro` para identificar el mes real de salida de caja;
+- si no existe esa fecha, revisar el extracto antes de asumirla.
 
-### IVA Sommos
+---
 
-Monto mensual de referencia:
-- USD 1,168.53
+## Gastos recurrentes conocidos
 
-Regla:
-- recurrente mensual
-- pago al final del mes siguiente
+Existen obligaciones recurrentes como:
 
-### IT Sommos
+- PPO
+- Big Picture
+- Ronny - Sommos
+- Caja Nacional de Salud
+- Gestora
+- IVA Sommos
+- IT Sommos
+- ChatGPT
+- Microsoft
+- Claude
+- Udemy
 
-Monto mensual:
-- USD 525.00
+Las recurrencias documentadas sirven como referencia, pero no se deben crear deudas futuras automáticamente antes de que corresponda su reconocimiento o exista soporte suficiente.
 
-Regla:
-- recurrente mensual
-- pago al final del mes siguiente
+---
 
-## Deudas no recurrentes
+## PPO
 
-### Viáticos CTO
+PPO corresponde a servicios tercerizados.
 
-- BOB 8,596
-- deuda originada en mayo 2026
-- vencimiento 15/11/2026
+Al revisar obligaciones de PPO, considerar el detalle real de las facturas y no consolidar meses distintos si existe documentación separada.
 
-### Interest on Convertible Notes
+El registro debe conservar:
 
-- USD 833
-- deuda correspondiente a enero y febrero
-- vencimiento 30/12/2026
+- fecha de factura;
+- importe;
+- moneda;
+- descripción del periodo;
+- vencimiento, cuando esté documentado;
+- estado de pago.
 
-## Regla de recurrencia
+---
 
-Los gastos recurrentes no deben generar automáticamente todas las CxP futuras.
+## CxP Sueldos
 
-Registrar cada factura cuando el periodo correspondiente ya se haya devengado.
+Los sueldos por pagar se controlan separadamente en `CxP Sueldos`.
 
-La recurrencia puede utilizarse como forecast, pero debe distinguirse de la CxP contable real.
+Esta vista puede contener:
+
+- sueldos devengados;
+- adelantos;
+- pagos;
+- saldo pendiente.
+
+No mezclar automáticamente la CxP de proveedores con la CxP laboral.
+
+Ambas forman parte de pasivos para futuros estados financieros, pero deben conservar su naturaleza.
+
+---
+
+## Validaciones obligatorias
+
+Antes de registrar o modificar CxP:
+
+1. leer encabezados actuales de `Transacciones`;
+2. buscar si la obligación ya existe;
+3. validar categoría;
+4. validar moneda y TC;
+5. no inventar país, responsable, banco ni vencimiento;
+6. verificar que `CxP Mensual` se actualice correctamente;
+7. revisar impacto en `Runway Mensual` y `Dashboard`;
+8. buscar errores de fórmulas.
+
+Si el Google Sheet contradice un snapshot documentado en GitHub, prevalece el Google Sheet.
