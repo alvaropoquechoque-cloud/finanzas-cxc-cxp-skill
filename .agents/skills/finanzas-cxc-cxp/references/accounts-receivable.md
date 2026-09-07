@@ -1,84 +1,191 @@
 # Cuentas por cobrar — CxC
 
-Este archivo documenta reglas y referencias conocidas. Antes de actuar, leer siempre `Transacciones` y `CxC` en vivo.
+## Fuente de verdad
 
-## Regla principal
+La fuente operativa principal es `Transacciones`.
 
-`Ingreso + Pendiente` en `Transacciones` genera una CxC.
+Una cuenta por cobrar existe cuando una transacción cumple:
 
-Cuando el movimiento cambia a `Pagado/Cobrado`, deja de formar parte de la CxC pendiente.
+- Tipo = `Ingreso`
+- Estado pago = `Pendiente`
 
-CxC no equivale a cash disponible.
+La vista principal de control es:
 
-## Grants conocidos
+- `CxC Mensual`
 
-### INNOVATECH
+La antigua pestaña `CxC` fue eliminada y no debe volver a utilizarse como fuente.
 
-Aprobado: USD 90,000
+---
 
-Desembolsos pendientes documentados:
-- USD 25,000 — vencimiento 31/08/2026
-- USD 35,000 — vencimiento 30/09/2026
+## Principio contable
 
-No registrar nuevamente desembolsos ya existentes.
+CxC representa dinero pendiente de cobrar.
 
-### Startup Perú
+No equivale a cash.
 
-- USD 934
-- vencimiento 31/08/2026
-- desembolso final
+Por lo tanto:
 
-### INCOFIN
+- `Pendiente` → forma parte de CxC.
+- `Pagado/Cobrado` → deja de formar parte de CxC.
+- Solo los cobros realizados afectan bancos y caja disponible.
 
-- USD 3,945
-- vencimiento 31/01/2026
-- cuenta vencida mientras continúe Pendiente
+Cuando una factura se cobra:
 
-### FIID Guatemala
+1. localizar la transacción original;
+2. cambiar su estado a `Pagado/Cobrado`;
+3. registrar `Fecha pago / cobro`;
+4. completar banco/cuenta correspondiente;
+5. conciliar contra extracto.
 
-Pendiente documentado:
-- USD 40,000 — 31/10/2026
-- USD 30,030 — 28/02/2027
+Nunca duplicar el ingreso creando otra transacción únicamente para registrar el cobro.
+
+---
+
+## CxC Mensual
+
+`CxC Mensual` es la vista visual de seguimiento.
+
+Cada cliente o grant tiene un bloque con:
+
+- Monto a facturar
+- Cobro
+- Saldo
+
+Los meses avanzan horizontalmente de enero a diciembre.
+
+### Histórico 2026
+
+Los meses enero–agosto contienen información histórica cargada desde archivos financieros fuente de Sommos.
+
+No modificar ese histórico sin confirmación explícita.
+
+Desde septiembre 2026 en adelante, la vista debe alimentarse principalmente desde `Transacciones`.
+
+---
 
 ## Clientes conocidos
 
-### BancoSol
+La vista puede incluir cuentas como:
 
-- BOB 17,500 mensuales
-- calendario documentado hasta septiembre 2026
-
-Antes de registrar un mes, verificar si ya fue cobrado y conciliado.
-
-### Banco de Crédito del Perú
-
-- USD 3,672 mensuales
-- calendario documentado hasta diciembre 2026
-
-### Rendinero
-
-- USD 1,000 mensuales
-- calendario documentado hasta noviembre 2026
-
-### Leads Quiero BCP
-
-- USD 4,000
-- pago correspondiente a agosto 2026
-
-## Facturas históricas conocidas
-
-Existen también referencias de:
-- BCP + Habitat
+- Banco Sol
+- BCP Perú
+- BCP Perú + Habitat
+- UNACEM - Progre Ahorro
+- Rendinero
+- LARA
+- Leads Quiero BCP
 - Primaa
-- Rendinero histórico
-- BCP histórico
+- Guerreras Juntas - Caja Los Andes
+- Others
 
-No asumir que continúan pendientes. Verificar el Sheet en vivo.
+Una cuenta puede existir visualmente aunque todavía no tenga movimiento en el periodo.
 
-## Grants: regla contable
+No eliminar bloques históricos solo porque actualmente estén en cero.
 
-Monto total aprobado ≠ CxC.
+---
 
-Solo registrar como CxC:
-- desembolsos exigibles
-- pagos aprobados pendientes
-- hitos con fecha pactada de cobro
+## Grants
+
+Los grants deben mantenerse separados conceptualmente de los ingresos operativos.
+
+Grants conocidos:
+
+- INNOVATECH
+- Startup Perú
+- INCOFIN
+- FIID Guatemala
+
+Categoría utilizada:
+
+`Other financing cash flow`
+
+### Regla crítica
+
+Monto aprobado de un grant no equivale automáticamente a CxC.
+
+Solo debe reconocerse como cuenta por cobrar cuando exista:
+
+- desembolso exigible;
+- hito cumplido con derecho de cobro;
+- factura o solicitud formal;
+- calendario documentado que justifique el registro.
+
+No registrar el total aprobado como CxC solo porque existe un convenio.
+
+---
+
+## Programación conocida de grants
+
+### INNOVATECH
+
+Aprobado: USD 90,000.
+
+Los desembolsos deben tratarse según el calendario real documentado y el estado actual del Sheet.
+
+### Startup Perú
+
+Programa finalizado.
+
+Conservar únicamente los importes efectivamente pendientes mientras sigan exigibles.
+
+### INCOFIN
+
+Mantener como vencido mientras el desembolso exigible siga pendiente.
+
+### FIID Guatemala
+
+Los desembolsos futuros deben reconocerse según las fechas documentadas.
+
+Siempre revisar el Google Sheet antes de usar estos datos, porque los pagos pueden haber cambiado desde la última documentación.
+
+---
+
+## Fecha de reconocimiento
+
+Para CxC pendiente:
+
+- usar `Fecha vencimiento` para proyectar el cobro;
+- no inventar una fecha si no existe evidencia.
+
+Para cobros realizados:
+
+- usar `Fecha pago / cobro` para identificar el mes real de caja.
+
+El mes de factura y el mes de cobro pueden ser distintos.
+
+---
+
+## Operative incomes
+
+`Operative incomes` es una vista de ingresos por mes y cliente.
+
+No sustituye a `Transacciones`.
+
+Puede combinar histórico cargado desde archivos financieros con información viva del modelo.
+
+No usar el total de `Operative incomes` como cash disponible.
+
+Debe distinguirse entre:
+
+- ingreso registrado/devengado;
+- CxC pendiente;
+- cobro realizado.
+
+---
+
+## Validaciones obligatorias
+
+Antes de registrar o modificar CxC:
+
+1. leer encabezados actuales de `Transacciones`;
+2. buscar duplicados;
+3. validar cliente o grant;
+4. validar categoría;
+5. validar moneda y TC;
+6. revisar vencimiento;
+7. no inventar país, responsable o banco;
+8. verificar actualización de `CxC Mensual`;
+9. revisar impacto en `Runway Mensual` y `Dashboard`;
+10. buscar errores de fórmulas.
+
+Si el Google Sheet contradice un snapshot documentado en GitHub, prevalece el Google Sheet.
