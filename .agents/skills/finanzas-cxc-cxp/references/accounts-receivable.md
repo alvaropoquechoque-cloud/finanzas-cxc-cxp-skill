@@ -1,71 +1,102 @@
-# Cuentas por cobrar — CxC
+# Finanzas Sommos — Cuentas por cobrar (CxC)
 
-## Fuente de verdad
+## Propósito
 
-La fuente operativa principal es `Transacciones`.
+Documentar la lógica de cuentas por cobrar utilizada por Sommos.
 
-Una cuenta por cobrar existe cuando una transacción cumple:
+Esta referencia pertenece a:
 
-- Tipo = `Ingreso`
-- Estado pago = `Pendiente`
+`finanzas-cxc-cxp`
 
-La vista principal de control es:
+La vista principal es:
 
-- `CxC Mensual`
+`CxC Mensual`
 
-La antigua pestaña `CxC` fue eliminada y no debe volver a utilizarse como fuente.
+La lógica fundamental es:
+
+`Operative incomes → Devengo`
+`Transacciones → Cobro`
+`CxC Mensual → Saldo`
 
 ---
 
-## Principio contable
+# Principio contable
 
-CxC representa dinero pendiente de cobrar.
+CxC representa derechos de cobro pendientes.
 
-No equivale a cash.
+No equivale a:
+
+- cash;
+- saldo bancario;
+- ingreso cobrado.
+
+El mes del ingreso y el mes del cobro pueden ser diferentes.
+
+---
+
+# Fuente del devengo
+
+Para clientes operativos, el monto a facturar debe provenir principalmente de:
+
+`Operative incomes`
 
 Por lo tanto:
 
-- `Pendiente` → forma parte de CxC.
-- `Pagado/Cobrado` → deja de formar parte de CxC.
-- Solo los cobros realizados afectan bancos y caja disponible.
+`Monto a facturar ≠ cobro bancario`
 
-Cuando una factura se cobra:
-
-1. localizar la transacción original;
-2. cambiar su estado a `Pagado/Cobrado`;
-3. registrar `Fecha pago / cobro`;
-4. completar banco/cuenta correspondiente;
-5. conciliar contra extracto.
-
-Nunca duplicar el ingreso creando otra transacción únicamente para registrar el cobro.
+No utilizar movimientos de `Transacciones` para decidir automáticamente cuánto ingreso se devengó en un mes.
 
 ---
 
-## CxC Mensual
+# Fuente del cobro
 
-`CxC Mensual` es la vista visual de seguimiento.
+Para histórico realizado, el cobro debe estar respaldado principalmente por:
 
-Cada cliente o grant tiene un bloque con:
+`Transacciones`
+
+y por la conciliación bancaria correspondiente.
+
+Utilizar cuando aplique:
+
+- Fecha pago / cobro;
+- Banco / cuenta;
+- Estado pago;
+- referencia bancaria;
+- conciliación.
+
+---
+
+# Roll-forward
+
+Conceptualmente:
+
+`Saldo final = Saldo inicial + Monto a facturar - Cobros`
+
+Cada mes debe continuar desde el saldo anterior.
+
+No hardcodear un saldo final solamente para alcanzar un total esperado.
+
+---
+
+# Estructura de CxC Mensual
+
+Cada cuenta puede contener:
 
 - Monto a facturar
 - Cobro
 - Saldo
 
-Los meses avanzan horizontalmente de enero a diciembre.
+Los meses avanzan horizontalmente.
 
-### Histórico 2026
+No asumir posiciones de filas.
 
-Los meses enero–agosto contienen información histórica cargada desde archivos financieros fuente de Sommos.
-
-No modificar ese histórico sin confirmación explícita.
-
-Desde septiembre 2026 en adelante, la vista debe alimentarse principalmente desde `Transacciones`.
+Buscar siempre el nombre del cliente/concepto en la hoja viva.
 
 ---
 
-## Clientes conocidos
+# Clientes conocidos
 
-La vista puede incluir cuentas como:
+Entre los clientes históricos pueden aparecer:
 
 - Banco Sol
 - BCP Perú
@@ -74,118 +105,291 @@ La vista puede incluir cuentas como:
 - Rendinero
 - LARA
 - Leads Quiero BCP
-- Primaa
+- Prima
 - Guerreras Juntas - Caja Los Andes
 - Others
 
-Una cuenta puede existir visualmente aunque todavía no tenga movimiento en el periodo.
+La lista viva prevalece.
 
-No eliminar bloques históricos solo porque actualmente estén en cero.
+No eliminar cuentas históricas únicamente porque estén actualmente en cero.
 
 ---
 
-## Grants
+# LARA
 
-Los grants deben mantenerse separados conceptualmente de los ingresos operativos.
+Existe un caso histórico donde los cobros asociados a LARA pueden aparecer bajo una descripción bancaria relacionada con:
 
-Grants conocidos:
+`CAJA RURAL DE AHORRO Y CREDITO LOS`
+
+o:
+
+`LARA`
+
+No modificar esa lógica sin revisar movimientos históricos.
+
+La categorización específica pertenece a:
+
+`finanzas-config-categorizacion`
+
+---
+
+# Others
+
+`Others` puede utilizarse como detalle de conciliación.
+
+Históricamente, el resumen principal de clientes del Control antiguo excluye `Others`.
+
+No incluirlo automáticamente en el total principal de clientes sin revisar la lógica vigente.
+
+Una modificación puede afectar:
+
+- CxC total;
+- Balance Sheet;
+- Cash Flow;
+- Dashboard.
+
+---
+
+# Grants
+
+Los grants se presentan separadamente de la CxC operativa.
+
+Programas conocidos:
 
 - INNOVATECH
 - Startup Perú
 - INCOFIN
 - FIID Guatemala
 
-Categoría utilizada:
+Un grant puede tener diferentes estados:
 
-`Other financing cash flow`
+- aprobado;
+- programado;
+- exigible;
+- cobrado;
+- pendiente.
 
-### Regla crítica
+No confundir estos conceptos.
 
-Monto aprobado de un grant no equivale automáticamente a CxC.
+---
 
-Solo debe reconocerse como cuenta por cobrar cuando exista:
+# Monto aprobado vs CxC
 
+El monto total aprobado de un grant no constituye automáticamente una cuenta por cobrar.
+
+Solo registrar como derecho de cobro cuando exista una base válida como:
+
+- hito cumplido;
 - desembolso exigible;
-- hito cumplido con derecho de cobro;
-- factura o solicitud formal;
-- calendario documentado que justifique el registro.
-
-No registrar el total aprobado como CxC solo porque existe un convenio.
+- calendario documentado;
+- solicitud aprobada;
+- derecho contractual de cobro.
 
 ---
 
-## Programación conocida de grants
+# Cobro de grant
 
-### INNOVATECH
+Para histórico:
 
-Aprobado: USD 90,000.
+usar cash real cuando exista.
 
-Los desembolsos deben tratarse según el calendario real documentado y el estado actual del Sheet.
+Para forecast:
 
-### Startup Perú
+utilizar el calendario validado del modelo.
 
-Programa finalizado.
+Caso conocido:
 
-Conservar únicamente los importes efectivamente pendientes mientras sigan exigibles.
+Startup Perú contempla aproximadamente:
 
-### INCOFIN
+`USD 934`
 
-Mantener como vencido mientras el desembolso exigible siga pendiente.
+de cobro en septiembre de 2026 dentro del forecast validado.
 
-### FIID Guatemala
+No eliminar o mover este cobro sin revisar:
 
-Los desembolsos futuros deben reconocerse según las fechas documentadas.
-
-Siempre revisar el Google Sheet antes de usar estos datos, porque los pagos pueden haber cambiado desde la última documentación.
-
----
-
-## Fecha de reconocimiento
-
-Para CxC pendiente:
-
-- usar `Fecha vencimiento` para proyectar el cobro;
-- no inventar una fecha si no existe evidencia.
-
-Para cobros realizados:
-
-- usar `Fecha pago / cobro` para identificar el mes real de caja.
-
-El mes de factura y el mes de cobro pueden ser distintos.
+- CxC Mensual;
+- Cash Flow;
+- Balance Sheet.
 
 ---
 
-## Operative incomes
+# Pago/cobro parcial
 
-`Operative incomes` es una vista de ingresos por mes y cliente.
+Si un cliente paga solo una parte:
 
-No sustituye a `Transacciones`.
+`Saldo restante = Derecho de cobro - Cobro parcial`
 
-Puede combinar histórico cargado desde archivos financieros con información viva del modelo.
+No marcar toda la cuenta como cobrada.
 
-No usar el total de `Operative incomes` como cash disponible.
-
-Debe distinguirse entre:
-
-- ingreso registrado/devengado;
-- CxC pendiente;
-- cobro realizado.
+Mantener el saldo pendiente.
 
 ---
 
-## Validaciones obligatorias
+# Fecha de factura
 
-Antes de registrar o modificar CxC:
+La fecha de factura/devengo pertenece al reconocimiento del ingreso.
 
-1. leer encabezados actuales de `Transacciones`;
-2. buscar duplicados;
-3. validar cliente o grant;
-4. validar categoría;
-5. validar moneda y TC;
-6. revisar vencimiento;
-7. no inventar país, responsable o banco;
-8. verificar actualización de `CxC Mensual`;
-9. revisar impacto en `Runway Mensual` y `Dashboard`;
-10. buscar errores de fórmulas.
+No reemplazarla con la fecha de cash.
 
-Si el Google Sheet contradice un snapshot documentado en GitHub, prevalece el Google Sheet.
+---
+
+# Fecha de vencimiento
+
+Se utiliza para:
+
+- seguimiento;
+- aging;
+- vencidos;
+- cobros próximos.
+
+No determina por sí sola el mes del ingreso.
+
+---
+
+# Fecha pago / cobro
+
+Representa cuándo ocurrió el cash.
+
+Se utiliza para:
+
+- cobro mensual;
+- Cash Flow;
+- conciliación;
+- análisis de liquidez.
+
+No modifica automáticamente el periodo de devengo.
+
+---
+
+# CxC vencida
+
+Conceptualmente:
+
+`Saldo pendiente > 0`
++
+`Fecha vencimiento < hoy`
+
+→ CxC vencida
+
+Debe seguir existiendo hasta que:
+
+- se cobre;
+- se cancele formalmente;
+- exista una decisión explícita de baja.
+
+---
+
+# Próximos 30 días
+
+El indicador de cobros próximos 30 días debe utilizar:
+
+- saldos de CxC;
+- vencimientos/calendario oficial;
+- grants cuando corresponda.
+
+No limitar el cálculo a transacciones bancarias pendientes.
+
+---
+
+# Relación con P&L
+
+La dirección principal es:
+
+`Operative incomes`
+→ `Real P&L`
+
+y:
+
+`Operative incomes`
+→ `CxC Mensual`
+
+No calcular Revenue del P&L desde el saldo de CxC.
+
+---
+
+# Relación con Cash Flow
+
+Cash Flow utiliza:
+
+- cobros;
+- variación de Accounts Receivable;
+- grants cobrados.
+
+Una modificación de CxC puede afectar directamente Cash Flow.
+
+---
+
+# Relación con Balance Sheet
+
+El saldo final de CxC alimenta activos.
+
+Antes de modificar un histórico:
+
+revisar el impacto en Balance Sheet.
+
+---
+
+# Histórico reconciliado
+
+El histórico hasta agosto de 2026 fue reconciliado contra el Control antiguo.
+
+No modificarlo automáticamente.
+
+Si una nueva fórmula cambia un mes cerrado:
+
+1. identificar la diferencia;
+2. revisar Operative incomes;
+3. revisar Transacciones;
+4. revisar saldo inicial;
+5. comparar contra el Control;
+6. revisar estados financieros.
+
+---
+
+# QA
+
+Después de modificar CxC comprobar:
+
+- Monto a facturar;
+- Cobro;
+- Saldo;
+- saldo anterior;
+- cliente correcto;
+- grant correcto;
+- mes correcto;
+- Cash Flow;
+- Balance Sheet;
+- Dashboard.
+
+Buscar además:
+
+- `#REF!`
+- `#VALUE!`
+- `#N/A`
+- `#DIV/0!`
+- `#ERROR!`
+
+---
+
+# Guardrails
+
+- No crear CxC únicamente porque exista un Ingreso Pendiente.
+- No mover el ingreso al mes del cobro.
+- No duplicar un cobro.
+- No inventar vencimientos.
+- No inventar grants.
+- No registrar todo el grant aprobado como CxC.
+- No hardcodear saldos para cuadrar.
+- No modificar históricos reconciliados sin validación.
+
+---
+
+# Regla final
+
+Para cada cuenta por cobrar deben poder responderse tres preguntas diferentes:
+
+1. ¿Cuánto se devengó?
+2. ¿Cuánto se cobró?
+3. ¿Cuánto sigue pendiente?
+
+No mezclar esas tres respuestas.
