@@ -1,149 +1,449 @@
-# Cuentas por pagar — CxP
+# Finanzas Sommos — Cuentas por pagar (CxP)
 
-## Fuente de verdad
+## Propósito
 
-La fuente operativa principal es `Transacciones`.
+Documentar la lógica de cuentas por pagar utilizada por Sommos.
 
-Una cuenta por pagar existe cuando una transacción cumple:
+Esta referencia pertenece a:
 
-- Tipo = `Egreso`
-- Estado pago = `Pendiente`
+`finanzas-cxc-cxp`
 
-La vista principal para control es:
+La vista principal es:
 
-- `CxP Mensual`
+`CxP Mensual`
 
-Para obligaciones laborales también existe:
+La lógica fundamental es:
 
-- `CxP Sueldos`
+`Real S&A → Devengo`
+`Transacciones → Pago`
+`CxP Mensual → Saldo`
 
-La antigua pestaña `CxP` fue eliminada y no debe volver a utilizarse como fuente.
+Para nómina:
 
----
-
-## Principio contable
-
-Una obligación pendiente no representa todavía una salida de caja.
-
-Por lo tanto:
-
-- `Pendiente` → forma parte de CxP.
-- `Pagado/Cobrado` → deja de formar parte de CxP.
-- Solo los movimientos realizados afectan bancos y burn real.
-
-Nunca crear una segunda transacción para registrar el pago de una obligación ya existente.
-
-Cuando se paga:
-
-1. localizar la transacción original;
-2. cambiar su estado a `Pagado/Cobrado`;
-3. registrar `Fecha pago / cobro`;
-4. completar cuenta bancaria si corresponde;
-5. conciliar contra el extracto.
+`Sueldos 2026 → Devengo`
+`CxP Sueldos → Pago / Adelanto / Saldo`
 
 ---
 
-## CxP Mensual
+# Principio contable
 
-`CxP Mensual` es la vista de control visual.
+CxP representa obligaciones pendientes.
 
-Cada proveedor u obligación tiene un bloque con:
+No equivale a:
+
+- gasto de banco;
+- cash;
+- gasto necesariamente reconocido en el mes de pago.
+
+El mes del gasto y el mes del pago pueden ser distintos.
+
+---
+
+# Fuente del devengo
+
+Para proveedores y gastos operativos, el monto a pagar debe provenir principalmente de:
+
+`Real S&A`
+
+No derivar el gasto desde `Transacciones`.
+
+Conceptualmente:
+
+`Monto a pagar = gasto devengado del periodo`
+
+---
+
+# Fuente del pago
+
+El cash realizado se identifica principalmente desde:
+
+`Transacciones`
+
+utilizando cuando aplique:
+
+- Fecha pago / cobro;
+- Banco / cuenta;
+- Estado pago;
+- referencia;
+- conciliación.
+
+---
+
+# Roll-forward
+
+Conceptualmente:
+
+`Saldo final = Saldo inicial + Monto a pagar - Pagos`
+
+Cada periodo debe partir del saldo del mes anterior.
+
+No hardcodear saldos para conseguir que cierre un total.
+
+---
+
+# Estructura CxP Mensual
+
+Cada proveedor/concepto puede contener:
 
 - Monto a pagar
 - Pago
 - Saldo
 
-Los meses avanzan horizontalmente de enero a diciembre.
-
-### Histórico 2026
-
-Los meses enero–agosto contienen histórico cargado desde los archivos financieros fuente de Sommos.
-
-No modificar ese histórico sin confirmación explícita.
-
-Desde septiembre 2026 en adelante, la vista debe alimentarse principalmente desde `Transacciones`.
+No asumir filas fijas sin leer primero la estructura viva.
 
 ---
 
-## Fecha de reconocimiento
+# Obligaciones conocidas
 
-Para obligaciones pendientes:
-
-- usar `Fecha vencimiento` para determinar el mes esperado de pago;
-- si no existe vencimiento documentado, no inventarlo.
-
-Para obligaciones pagadas:
-
-- usar `Fecha pago / cobro` para identificar el mes real de salida de caja;
-- si no existe esa fecha, revisar el extracto antes de asumirla.
-
----
-
-## Gastos recurrentes conocidos
-
-Existen obligaciones recurrentes como:
+Pueden aparecer conceptos como:
 
 - PPO
 - Big Picture
 - Ronny - Sommos
 - Caja Nacional de Salud
 - Gestora
+- Vales
+- Síndico
+- Viáticos
+- Retiro
+- Uber
+- Pasajes
+- ChatGPT
+- Figma
+- Freepik
+- Microsoft
+- GitHub
+- Anthropic
+- Udemy
+- Google Workspace
+- Google Cloud
+- Comisiones bancarias
+- Exchange
 - IVA Sommos
 - IT Sommos
-- ChatGPT
-- Microsoft
-- Claude
-- Udemy
+- Marketing
 
-Las recurrencias documentadas sirven como referencia, pero no se deben crear deudas futuras automáticamente antes de que corresponda su reconocimiento o exista soporte suficiente.
+La lista viva prevalece.
 
 ---
 
-## PPO
+# PPO
 
-PPO corresponde a servicios tercerizados.
+PPO es un caso crítico porque un pago bancario puede cubrir varias facturas.
 
-Al revisar obligaciones de PPO, considerar el detalle real de las facturas y no consolidar meses distintos si existe documentación separada.
+Cuando exista documentación:
 
-El registro debe conservar:
+mantener separadamente:
 
-- fecha de factura;
+- factura;
+- fecha documental;
+- mes del devengo;
 - importe;
 - moneda;
-- descripción del periodo;
-- vencimiento, cuando esté documentado;
-- estado de pago.
+- fecha real de pago.
+
+Regla obligatoria:
+
+`SUMA de facturas/componentes = pago bancario total`
+
+No mover todos los devengos al mes del pago.
 
 ---
 
-## CxP Sueldos
+# Pagos agrupados
 
-Los sueldos por pagar se controlan separadamente en `CxP Sueldos`.
+Un pago puede liquidar múltiples obligaciones.
 
-Esta vista puede contener:
+No obligar una relación uno-a-uno entre:
 
-- sueldos devengados;
+- movimiento de banco;
+- factura.
+
+El objetivo es conservar:
+
+- trazabilidad bancaria;
+- trazabilidad documental;
+- devengo correcto;
+- saldo correcto.
+
+---
+
+# Cutoff
+
+El cierre mensual puede generar casos donde:
+
+- existe cargo bancario;
+- pero la obligación permanece abierta al cierre;
+
+o viceversa.
+
+No asumir que cualquier pago bancario elimina automáticamente CxP del mismo mes.
+
+Caso histórico conocido:
+
+Figma en agosto de 2026.
+
+El Control mantuvo el saldo abierto por lógica de cutoff.
+
+Antes de modificar:
+
+revisar la lógica contable y el periodo de cierre.
+
+---
+
+# Viajes Innovatech
+
+Algunos pagos pueden agrupar movimientos relacionados con el proyecto/categoría Innovatech.
+
+No depender únicamente de una descripción literal.
+
+Revisar:
+
+- categoría;
+- proyecto;
+- concepto;
+- documentación.
+
+---
+
+# Bank fees
+
+El Control histórico puede contener importes de comisión que no tienen una única transacción limpia asociada.
+
+No inventar movimientos bancarios para reproducirlos.
+
+Cuando sea necesario mantener una conciliación histórica:
+
+documentar explícitamente la fuente y lógica utilizada.
+
+---
+
+# Impuestos
+
+Conceptos como:
+
+- IVA Sommos;
+- IT Sommos;
+
+pueden tener diferencias entre:
+
+- devengo;
+- pago;
+- saldo.
+
+No asumir que el monto pagado es igual al gasto del mes.
+
+---
+
+# Diferencias de cambio
+
+`Exchange rate differences` puede ser una partida contable y no necesariamente un cash individual equivalente.
+
+No forzar su liquidación desde una transacción bancaria si la lógica del Control demuestra otra metodología.
+
+---
+
+# Interés convertible
+
+El interés de financiamiento convertible debe mantenerse separado cuando el Balance Sheet lo presenta en su propia línea.
+
+No incluirlo automáticamente dentro del saldo general de CxP proveedores si eso genera doble conteo.
+
+---
+
+# CxP Sueldos
+
+La nómina debe gestionarse separadamente de proveedores.
+
+Pestañas:
+
+- `Sueldos 2026`
+- `CxP Sueldos`
+
+La estructura conceptual incluye:
+
+- sueldo devengado;
 - adelantos;
 - pagos;
-- saldo pendiente.
+- saldo.
 
-No mezclar automáticamente la CxP de proveedores con la CxP laboral.
+El saldo final alimenta:
 
-Ambas forman parte de pasivos para futuros estados financieros, pero deben conservar su naturaleza.
+`Balance Sheet`
 
 ---
 
-## Validaciones obligatorias
+# Precisión de CxP Sueldos
 
-Antes de registrar o modificar CxP:
+No redondear prematuramente.
 
-1. leer encabezados actuales de `Transacciones`;
-2. buscar si la obligación ya existe;
-3. validar categoría;
-4. validar moneda y TC;
-5. no inventar país, responsable, banco ni vencimiento;
-6. verificar que `CxP Mensual` se actualice correctamente;
-7. revisar impacto en `Runway Mensual` y `Dashboard`;
-8. buscar errores de fórmulas.
+El modelo histórico validado conserva decimales exactos.
 
-Si el Google Sheet contradice un snapshot documentado en GitHub, prevalece el Google Sheet.
+Por ejemplo, diferencias de centavos pueden afectar:
+
+- Cash Flow;
+- Balance Sheet;
+- check de caja.
+
+La visualización puede redondear.
+
+La fórmula fuente no debe hacerlo innecesariamente.
+
+---
+
+# Adelantos
+
+Los adelantos:
+
+- no son un gasto adicional;
+- reducen la obligación cuando corresponda.
+
+No sumar gasto + adelanto como si fueran dos gastos independientes.
+
+---
+
+# Vencimientos
+
+`Fecha vencimiento` sirve para:
+
+- seguimiento;
+- aging;
+- pagos próximos;
+- vencidos.
+
+No determina el mes de gasto.
+
+---
+
+# Próximos 30 días
+
+El Dashboard debe poder estimar pagos próximos utilizando:
+
+- CxP Mensual;
+- CxP Sueldos;
+- calendario/vencimientos.
+
+No depender únicamente de transacciones pendientes.
+
+---
+
+# Relación con P&L
+
+La dirección principal es:
+
+`Real S&A`
+→ `Real P&L`
+
+y:
+
+`Real S&A`
+→ `CxP Mensual`
+
+Para salarios:
+
+`Sueldos 2026`
+→ `Real P&L`
+
+y:
+
+`Sueldos 2026`
+→ `CxP Sueldos`
+
+No construir gastos P&L desde pagos bancarios.
+
+---
+
+# Relación con Cash Flow
+
+Cash Flow utiliza:
+
+- pagos;
+- variación de Accounts Payable;
+- variación de CxP Sueldos.
+
+La variación de CxP Sueldos debe estar amarrada al saldo que llega a Balance Sheet cuando corresponda.
+
+---
+
+# Relación con Balance Sheet
+
+El saldo final de:
+
+- CxP proveedores;
+- CxP Sueldos;
+
+alimenta pasivos.
+
+Evitar doble conteo de obligaciones presentadas en líneas específicas.
+
+---
+
+# Histórico reconciliado
+
+El histórico hasta agosto de 2026 fue reconciliado contra:
+
+`Accounts R&P 2`
+
+del Control antiguo.
+
+`CxP Sueldos` fue reconciliado contra:
+
+`Accounts P TH`
+
+No modificar estos periodos automáticamente.
+
+---
+
+# QA
+
+Después de modificar CxP comprobar:
+
+- devengo;
+- pago;
+- saldo;
+- saldo anterior;
+- concepto;
+- periodo;
+- cutoff;
+- precisión;
+- CxP Sueldos si aplica;
+- Balance Sheet;
+- Cash Flow.
+
+Buscar errores:
+
+- `#REF!`
+- `#VALUE!`
+- `#N/A`
+- `#DIV/0!`
+- `#ERROR!`
+
+---
+
+# Guardrails
+
+- No crear CxP solo porque exista un Egreso Pendiente.
+- No reconocer gasto nuevamente al pagar.
+- No mover el gasto al mes del cash.
+- No cerrar una obligación parcial totalmente.
+- No eliminar diferencias de cutoff automáticamente.
+- No inventar pagos.
+- No inventar vencimientos.
+- No hardcodear saldos.
+- No redondear innecesariamente.
+- No mezclar proveedores y sueldos.
+- No duplicar el interés del convertible.
+
+---
+
+# Regla final
+
+Para cada cuenta por pagar deben separarse:
+
+1. gasto/devengo;
+2. pago;
+3. saldo.
+
+El objetivo no es solamente saber cuánto salió del banco.
+
+El objetivo es saber también cuánto se debía y cuánto sigue pendiente.
