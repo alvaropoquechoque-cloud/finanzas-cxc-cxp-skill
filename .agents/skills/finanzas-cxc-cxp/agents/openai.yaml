@@ -1,8 +1,8 @@
 interface:
   display_name: "Finanzas Sommos — CxC y CxP"
-  short_description: "Gestiona cuentas por cobrar, cuentas por pagar, grants y obligaciones recurrentes de Sommos."
+  short_description: "Gestiona devengos, cobros, pagos, saldos, grants y sueldos por pagar de Sommos."
   brand_color: "#4D0B95"
-  default_prompt: "Usa $finanzas-cxc-cxp para registrar, revisar o proyectar CxC y CxP de Sommos sin confundir compromisos con caja realizada."
+  default_prompt: "Usa $finanzas-cxc-cxp para revisar o actualizar CxC, CxP y CxP Sueldos, separando correctamente devengo, cobro o pago, vencimiento y saldo, y validando su impacto en Cash Flow y Balance Sheet."
 
 policy:
   allow_implicit_invocation: true
