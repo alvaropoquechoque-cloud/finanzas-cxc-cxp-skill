@@ -1,118 +1,208 @@
 ---
 name: finanzas-cxc-cxp
-description: Gestiona cuentas por cobrar, cuentas por pagar, grants, sueldos por pagar, vencimientos y obligaciones recurrentes de Sommos.
+description: Gestiona y audita las cuentas por cobrar, cuentas por pagar, grants y sueldos por pagar de Sommos, separando correctamente devengo, cobro/pago, vencimiento y saldo.
 ---
 
 # Finanzas Sommos — CxC y CxP
 
 ## Propósito
 
-Gestionar y auditar las cuentas por cobrar y cuentas por pagar de Sommos sin confundir:
+Gestionar la capa de capital de trabajo del workflow financiero de Sommos.
 
-- compromisos futuros;
-- obligaciones vencidas;
-- movimientos pendientes;
-- cobros y pagos realizados;
-- caja bancaria real.
+Esta skill es responsable principalmente de:
 
-Esta skill trabaja sobre el Google Sheet financiero de Sommos y utiliza `Transacciones` como fuente de verdad operativa.
+- `CxC Mensual`;
+- `CxP Mensual`;
+- `CxP Sueldos`;
+- seguimiento de saldos;
+- cobros y pagos;
+- vencimientos;
+- grants;
+- obligaciones recurrentes;
+- conciliación entre devengo y cash;
+- validación de saldos que alimentan Balance Sheet y Cash Flow.
 
-## Archivo principal
+La regla central del modelo es:
 
-- Spreadsheet: `Finanzas Sommos — Workflow y Control`
-- Spreadsheet ID: `1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
-- URL: `https://docs.google.com/spreadsheets/d/1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E/edit`
+**devengo ≠ cash**
 
-## Pestañas principales
+Esta skill debe preservar siempre esa separación.
+
+---
+
+# Archivo principal
+
+Google Sheet:
+
+`Finanzas Sommos — Workflow y Control`
+
+Spreadsheet ID:
+
+`1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
+
+URL:
+
+`https://docs.google.com/spreadsheets/d/1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E/edit`
+
+Antes de cualquier modificación:
+
+1. leer las pestañas vivas;
+2. leer encabezados y fórmulas;
+3. identificar el mes afectado;
+4. revisar fuentes de devengo;
+5. revisar movimientos de cash;
+6. revisar saldos anteriores;
+7. verificar dependencias posteriores.
+
+Nunca asumir posiciones históricas de filas o columnas.
+
+---
+
+# Pestañas principales
 
 Esta skill opera principalmente:
 
-- `Transacciones`
 - `CxC Mensual`
 - `CxP Mensual`
 - `CxP Sueldos`
 
-También puede consultar:
+Fuentes necesarias:
 
-- `Sueldos 2026`
 - `Operative incomes`
 - `Real S&A`
+- `Sueldos 2026`
+- `Transacciones`
+
+También puede consultar:
+
 - `Bancos`
+- `Real P&L`
+- `Cash Flow`
+- `Balance Sheet`
 - `Runway Mensual`
 - `Dashboard`
 - `Config`
 - `Reglas categorización`
 - `TC BCB`
 
-## Fuente de verdad
+---
 
-`Transacciones` es la fuente de verdad operativa.
+# Arquitectura contable
 
-Las pestañas:
+## Cuentas por cobrar
 
-- `CxC Mensual`
-- `CxP Mensual`
-- `CxP Sueldos`
+La lógica oficial es:
 
-son vistas de control y seguimiento.
+`Operative incomes`
+→ devengo / monto a facturar
 
-No registrar una misma obligación nuevamente en una vista mensual si ya existe en `Transacciones`.
+`Transacciones`
+→ cobro real
 
-Las antiguas pestañas `CxC` y `CxP` fueron eliminadas y no deben volver a utilizarse.
+`CxC Mensual`
+→ roll-forward y saldo
+
+Conceptualmente:
+
+`Saldo final CxC = Saldo inicial + Monto a facturar - Cobros`
+
+Por lo tanto:
+
+**una CxC no nace únicamente porque exista una transacción marcada Pendiente.**
+
+El derecho de cobro operativo se determina desde el calendario/devengo correspondiente.
 
 ---
 
-# Cuentas por cobrar
+# Cuentas por pagar
 
-## Regla principal
+La lógica oficial es:
 
-Una cuenta por cobrar operativa nace cuando existe una transacción con:
+`Real S&A`
+→ devengo / monto a pagar
 
-- Tipo = `Ingreso`
-- Estado pago = `Pendiente`
+`Transacciones`
+→ pago real
 
-Mientras permanezca pendiente:
+`CxP Mensual`
+→ roll-forward y saldo
 
-- forma parte de CxC;
-- puede afectar la proyección de caja;
-- no constituye cash realizado;
-- no debe afectar Bancos.
+Conceptualmente:
 
-Cuando el dinero sea efectivamente recibido:
+`Saldo final CxP = Saldo inicial + Monto a pagar - Pagos`
 
-- actualizar la misma transacción;
-- cambiar el estado correspondiente a `Pagado/Cobrado`;
-- registrar `Fecha pago / cobro`;
-- conciliar el movimiento contra el extracto bancario.
+Por lo tanto:
 
-No crear una segunda transacción para liquidar una CxC existente.
+**una CxP no nace únicamente porque exista un Egreso Pendiente en Transacciones.**
 
-## CxC Mensual
+El gasto y obligación del periodo se determinan desde el devengo correspondiente.
 
-`CxC Mensual` presenta las cuentas por cobrar en formato horizontal por mes.
+---
 
-Cada cuenta tiene un bloque conceptual:
+# Sueldos por pagar
+
+La lógica oficial es:
+
+`Sueldos 2026`
+→ gasto/devengo de nómina
+
+`CxP Sueldos`
+→ sueldo por pagar + adelantos - pagos = saldo
+
+`Transacciones`
+→ evidencia bancaria cuando corresponda
+
+`CxP Sueldos` debe mantener separadamente:
+
+- sueldos devengados;
+- adelantos;
+- sueldos pagados;
+- cuenta por pagar de sueldos;
+- neto gastado del mes.
+
+El saldo de `CxP Sueldos` alimenta el pasivo del Balance Sheet.
+
+---
+
+# CxC Mensual
+
+## Estructura
+
+Cada cliente utiliza conceptualmente:
 
 - Monto a facturar
 - Cobro
 - Saldo
 
-Los meses avanzan hacia la derecha.
+Los meses avanzan horizontalmente.
 
-Esta pestaña funciona como vista de seguimiento y no reemplaza `Transacciones`.
+## Monto a facturar
 
-## Histórico 2026
+Debe provenir principalmente de:
 
-En `CxC Mensual`:
+`Operative incomes`
 
-- enero a agosto de 2026 contienen histórico cargado desde los archivos financieros fuente;
-- septiembre de 2026 en adelante debe mantenerse conectado al modelo vivo y a `Transacciones`.
+No calcular el devengo a partir del movimiento bancario.
 
-No sobrescribir el histórico enero-agosto sin autorización explícita.
+## Cobro
 
-## Clientes y cuentas conocidas
+Debe representar cash efectivamente cobrado o el calendario de cobro validado para forecast.
 
-Entre las cuentas conocidas pueden aparecer:
+Para histórico realizado:
+
+usar evidencia de `Transacciones` y conciliación bancaria.
+
+## Saldo
+
+Debe ser roll-forward.
+
+No hardcodear un saldo solamente para conseguir que coincida con un total.
+
+---
+
+# Clientes
+
+Entre las cuentas históricas conocidas pueden aparecer:
 
 - Banco Sol
 - BCP Perú
@@ -121,112 +211,129 @@ Entre las cuentas conocidas pueden aparecer:
 - Rendinero
 - LARA
 - Leads Quiero BCP
+- Prima
 - Guerreras Juntas - Caja Los Andes
-- Primaa
 - Others
 
-La lista puede crecer.
+La estructura viva prevalece.
 
-Antes de crear una nueva cuenta, comprobar si ya existe con otro nombre o variante.
+No eliminar un cliente histórico únicamente porque actualmente tenga saldo cero.
 
 ---
 
-# Grants y otros financiamientos
+# Others en CxC
 
-## Regla contable
+`Others` puede existir como detalle de conciliación.
 
-El monto total aprobado de un grant no equivale automáticamente a CxC.
+Históricamente, el resumen principal de clientes del Control antiguo excluye `Others`.
 
-Distinguir:
+No cambiar esa lógica sin revisar:
 
-1. monto aprobado;
-2. monto recibido;
-3. desembolso programado;
-4. desembolso exigible;
-5. desembolso vencido;
-6. desembolso efectivamente cobrado.
+- resumen de CxC;
+- Balance Sheet;
+- Cash Flow;
+- Dashboard.
 
-Un grant puede registrarse como cuenta por cobrar cuando existe un desembolso concreto pendiente o una fecha programada que el modelo financiero de Sommos deba controlar.
+---
 
-## Grants conocidos
+# Grants
 
-Programas documentados incluyen:
+Los grants se controlan separadamente de los clientes operativos.
+
+Programas conocidos:
 
 - INNOVATECH
 - Startup Perú
 - INCOFIN
 - FIID Guatemala
 
-Los grants deben utilizar la categoría:
+Un grant puede tener:
 
-`Other financing cash flow`
+- monto aprobado;
+- desembolso programado;
+- desembolso exigible;
+- cobro;
+- saldo.
 
-salvo que la configuración viva del Sheet indique otra cosa.
-
-No tratarlos automáticamente como ingreso operativo ordinario.
-
-## Importante
-
-Antes de crear una nueva CxC de grant:
-
-- buscar duplicados en `Transacciones`;
-- revisar desembolsos ya cobrados;
-- revisar vencimientos existentes;
-- comprobar si el monto representa saldo total aprobado o una cuota específica.
+No confundir el monto total aprobado con una CxC exigible.
 
 ---
 
-# Cuentas por pagar
+# Devengo de grants
 
-## Regla principal
+El calendario financiero validado puede provenir de:
 
-Una cuenta por pagar nace cuando existe una transacción con:
+`Operative incomes`
 
-- Tipo = `Egreso`
-- Estado pago = `Pendiente`
+o de la fuente específica utilizada por el modelo vivo.
 
-Mientras permanezca pendiente:
+El grant debe reconocerse según:
 
-- forma parte de CxP;
-- puede afectar la proyección de caja;
-- no constituye gasto bancario realizado;
-- no debe afectar Bancos hasta el pago efectivo.
+- hito;
+- calendario;
+- exigibilidad;
+- documentación.
 
-Cuando se pague:
+No registrar automáticamente todo el monto aprobado como CxC.
 
-- actualizar la transacción existente;
-- cambiar el estado a `Pagado/Cobrado`;
-- registrar `Fecha pago / cobro`;
-- conciliar con el extracto bancario.
+---
 
-No duplicar la obligación creando otra transacción de pago.
+# Cobro de grants
 
-## CxP Mensual
+Los cobros deben reflejar:
 
-`CxP Mensual` presenta las obligaciones por proveedor o concepto con estructura:
+- cash real para histórico;
+- calendario oficial validado para forecast.
+
+Caso histórico conocido:
+
+Startup Perú tiene un desembolso de aproximadamente:
+
+`USD 934`
+
+en septiembre de 2026 dentro del forecast validado.
+
+No eliminar ese cobro sin revisar primero Cash Flow y Balance Sheet.
+
+---
+
+# CxP Mensual
+
+## Estructura
+
+Cada proveedor/concepto utiliza:
 
 - Monto a pagar
 - Pago
 - Saldo
 
-Los meses avanzan horizontalmente.
+## Monto a pagar
 
-La vista contiene tanto obligaciones históricas como proveedores recurrentes.
+Debe provenir principalmente de:
 
-## Histórico 2026
+`Real S&A`
 
-En `CxP Mensual`:
+No derivar el gasto desde el pago bancario.
 
-- enero a agosto de 2026 contienen histórico cargado desde los archivos financieros fuente;
-- septiembre de 2026 en adelante debe mantenerse conectado a `Transacciones`.
+## Pago
 
-No sobrescribir el histórico anterior sin autorización explícita.
+Debe representar la liquidación de la obligación.
 
-## Obligaciones recurrentes
+Para meses históricos:
 
-Una obligación recurrente no significa que deba crearse toda la deuda futura inmediatamente.
+debe respetarse la conciliación validada contra el antiguo `Accounts R&P 2` / lógica bancaria correspondiente.
 
-Ejemplos conocidos de gastos recurrentes:
+## Saldo
+
+Conceptualmente:
+
+`Saldo actual = Saldo anterior + Devengo - Pago`
+
+---
+
+# Obligaciones recurrentes
+
+Pueden existir conceptos como:
 
 - PPO
 - Big Picture
@@ -235,282 +342,492 @@ Ejemplos conocidos de gastos recurrentes:
 - Gestora
 - ChatGPT
 - Microsoft
-- Claude
+- Anthropic / Claude
 - Udemy
+- Google Cloud
 - IVA Sommos
 - IT Sommos
+- Marketing
+- otros proveedores recurrentes
 
-Regla:
+Que un concepto sea recurrente no significa que el pago deba reconocerse como gasto en el mes de cash.
 
-Crear la CxP cuando la obligación correspondiente al periodo ya exista o se haya devengado.
+El devengo sigue viniendo de:
 
-No crear automáticamente todos los meses futuros como deuda contable solo porque el proveedor sea recurrente.
+`Real S&A`
 
 ---
 
 # PPO
 
-PPO es un proveedor conocido de servicios tercerizados.
+PPO es un caso importante.
 
-Antes de modificar sus obligaciones:
+Puede existir un único pago bancario que liquide varias facturas.
 
-- revisar las facturas existentes;
-- revisar el monto en moneda original;
-- revisar el TC utilizado;
-- evitar consolidar varias facturas como una sola sin respaldo.
+Cuando exista soporte:
 
-El detalle documental conocido incluye facturas mensuales individuales.
+- separar facturas por periodo;
+- conservar fecha de factura;
+- conservar monto documental;
+- mantener fecha real de pago;
+- comprobar que la suma de componentes coincida con el movimiento bancario total.
 
-Si se recibe un estado de cuenta de PPO, conciliar cada factura contra la obligación correspondiente en `Transacciones` y `CxP Mensual`.
+Nunca consolidar devengos de varios meses únicamente porque se pagaron juntos.
 
 ---
 
-# Sueldos por pagar
+# Cutoff
 
-## Pestañas
+El modelo puede contener diferencias entre:
 
-La gestión de nómina relacionada con CxP utiliza:
+- fecha de cargo;
+- periodo contable;
+- fecha de cierre.
 
-- `Sueldos 2026`
-- `CxP Sueldos`
+Por ello:
 
-`Sueldos 2026` funciona como maestro y planificación de nómina.
+un cargo bancario no necesariamente elimina una CxP en el mismo periodo.
 
-`CxP Sueldos` controla principalmente:
+Caso histórico conocido:
 
-- sueldos devengados;
+Figma en agosto tuvo movimiento bancario, pero el Control mantuvo la obligación abierta por lógica de cutoff.
+
+No corregir automáticamente estos casos únicamente porque exista cash.
+
+Revisar primero la lógica histórica y documental.
+
+---
+
+# CxP Sueldos
+
+`CxP Sueldos` debe mantenerse alineado con:
+
+`Sueldos 2026`
+
+y con la lógica histórica validada del antiguo:
+
+`Accounts P TH`
+
+La pestaña contiene:
+
+- personas;
+- área;
+- cargo;
+- concepto salarial;
+- meses;
+- totales;
+- sueldos por pagar;
 - adelantos;
-- pagos;
-- saldos pendientes.
+- sueldos pagados;
+- cuenta por pagar;
+- neto mensual.
 
-## Regla contable
+No redondear prematuramente pagos o saldos.
 
-El gasto de sueldo y el pago del sueldo son eventos relacionados pero conceptualmente distintos.
+La precisión interna debe conservar los decimales fuente aunque la presentación visual muestre menos.
 
-Un sueldo puede:
+---
 
-1. devengarse;
-2. generar una obligación;
-3. pagarse posteriormente.
+# Adelantos
 
-El saldo pendiente debe poder utilizarse posteriormente como pasivo para el Balance General.
+Los adelantos deben reducir correctamente el saldo pendiente según la lógica de nómina.
 
-No confundir el plan de nómina con deuda efectivamente devengada.
+No tratarlos automáticamente como un gasto adicional.
+
+El gasto de sueldo se reconoce desde nómina.
+
+El adelanto representa una liquidación parcial o anticipada de esa obligación.
 
 ---
 
 # Vencimientos
 
-## Fecha de vencimiento
+Una cuenta puede estar:
 
-Cuando exista una fecha contractual o documental:
+- vigente;
+- vencida;
+- pagada/cobrada.
 
-usar la fecha real.
+Una obligación vencida sigue siendo una obligación pendiente hasta su liquidación.
 
-Cuando el usuario proporcione explícitamente una periodicidad mensual pero no un día contractual, puede utilizarse fin de mes únicamente cuando esa convención esté claramente acordada en el modelo.
+Conceptualmente:
 
-Nunca inventar una fecha de vencimiento si no existe evidencia suficiente.
+`Saldo pendiente > 0`
++
+`Fecha vencimiento < hoy`
+→ vencida
 
-## Cuenta vencida
-
-Una obligación es vencida cuando:
-
-- Estado = `Pendiente`;
-- existe Fecha vencimiento;
-- Fecha vencimiento < fecha actual.
-
-Esto aplica tanto a CxC como a CxP.
+No usar el vencimiento para modificar el periodo del devengo.
 
 ---
 
-# Pago y cobro
+# Próximos 30 días
 
-## Fecha pago / cobro
+El Dashboard utiliza indicadores de:
 
-`Transacciones` contiene una columna:
+- cobros próximos 30 días;
+- pagos próximos 30 días.
 
-`Fecha pago / cobro`
+Estos indicadores deben alimentarse del calendario oficial de:
 
-Esta fecha representa cuándo el movimiento fue efectivamente realizado.
-
-Debe utilizarse para:
-
-- conciliación bancaria;
-- ubicación mensual de pagos/cobros;
-- análisis de caja;
-- vistas mensuales.
-
-No sustituir con ella la fecha original de factura o registro.
-
----
-
-# Relación con extractos bancarios
-
-Cuando se carga un extracto bancario:
-
-1. identificar el movimiento;
-2. buscar si ya existe una CxC o CxP pendiente;
-3. evitar crear duplicados;
-4. actualizar la obligación existente cuando corresponda;
-5. registrar fecha real de pago/cobro;
-6. completar banco/cuenta;
-7. conciliar el movimiento;
-8. verificar que el saldo mensual se actualice.
-
-Un movimiento bancario no debe crear automáticamente una nueva CxC/CxP si ya existía una obligación pendiente.
-
----
-
-# Transferencias internas
-
-Las transferencias internas no representan:
-
-- ingreso operativo;
-- gasto operativo;
 - CxC;
-- CxP.
+- CxP;
+- CxP Sueldos.
 
-Deben utilizar:
+No usar únicamente movimientos bancarios pendientes de `Transacciones`.
 
-- Tipo = `Transferencia interna`;
-- Categoría = `Transferencias internas`.
-
-Cuando sea posible registrar:
-
-- Cuenta origen
-- Cuenta destino
-- Detalle transferencia
-
-Las transferencias internas sí afectan los saldos de las cuentas bancarias involucradas, pero no el resultado financiero de la compañía.
+El objetivo es mostrar el calendario financiero, no solo movimientos ya cargados en banco.
 
 ---
 
-# Moneda y tipo de cambio
+# Estado de pago
 
-No calcular manualmente conversiones si el Sheet ya dispone de la lógica automática.
+`Estado pago` en `Transacciones` es un control operacional.
 
-Reglas conocidas:
+Puede incluir:
 
-- USD → 1
-- SOL → 0.28
-- BOB → TC oficial BCB correspondiente a la fecha
-- otras monedas → TC manual cuando corresponda
+- `Pendiente`
+- `Pagado/Cobrado`
 
-Para BOB:
+Pero:
 
-- usar el TC oficial aplicable a la fecha;
-- fines de semana o feriados deben utilizar el último TC oficial disponible anterior o igual a la fecha.
+`Pendiente` no crea automáticamente el devengo.
 
-La lógica específica de TC pertenece principalmente a la skill:
+Y:
+
+`Pagado/Cobrado` no determina automáticamente el mes del P&L.
+
+Su función principal es distinguir si el cash ocurrió.
+
+---
+
+# Liquidación de una obligación existente
+
+Cuando un extracto confirma el pago/cobro de una obligación:
+
+1. buscar la obligación relacionada;
+2. validar contraparte;
+3. validar monto;
+4. validar moneda;
+5. registrar Fecha pago/cobro;
+6. completar banco/cuenta;
+7. actualizar estado;
+8. conciliar;
+9. verificar CxC/CxP.
+
+Evitar duplicar el hecho económico.
+
+---
+
+# Pagos parciales
+
+Un pago parcial no debe cerrar automáticamente toda la obligación.
+
+Calcular:
+
+`Saldo = Obligación - Pago parcial`
+
+Mantener el saldo restante hasta su liquidación.
+
+---
+
+# Cobros parciales
+
+Misma regla:
+
+`Saldo CxC = Derecho de cobro - Cobro parcial`
+
+No marcar el total como cobrado si queda saldo.
+
+---
+
+# Moneda y TC
+
+La lógica específica pertenece a:
 
 `finanzas-transacciones-tc`
 
----
+Esta skill debe respetar los montos USD calculados correctamente.
 
-# Categorías
-
-No inventar categorías.
-
-Si una obligación no puede clasificarse con seguridad:
-
-usar el mecanismo de categorización definido por:
-
-`finanzas-config-categorizacion`
-
-No modificar reglas de categorización desde esta skill salvo que el usuario lo solicite expresamente.
+No recalcular TC de forma independiente salvo que sea necesario auditar una diferencia.
 
 ---
 
-# Validaciones antes de escribir
+# Histórico reconciliado
 
-Antes de crear o modificar una CxC/CxP:
+Los históricos ya conciliados no deben modificarse automáticamente.
 
-1. leer en vivo los encabezados actuales de `Transacciones`;
-2. no asumir posiciones históricas de columnas;
-3. buscar duplicados;
-4. revisar descripción, moneda y monto;
-5. revisar estado;
-6. revisar vencimiento;
-7. comprobar banco/cuenta cuando corresponda;
-8. comprobar si existe una obligación previa del mismo concepto;
-9. revisar la vista mensual relacionada.
+Actualmente existe una reconciliación validada contra el Control antiguo para:
 
----
+- CxC Mensual
+- CxP Mensual
+- CxP Sueldos
 
-# Validaciones después de escribir
+especialmente hasta agosto de 2026.
 
-Después de una modificación:
+Si una modificación altera ese histórico:
 
-1. releer las filas modificadas en `Transacciones`;
-2. comprobar `CxC Mensual` o `CxP Mensual`;
-3. revisar `CxP Sueldos` si aplica;
-4. revisar `Runway Mensual` si cambió un vencimiento;
-5. revisar `Dashboard`;
-6. revisar `Bancos` si se trató de un pago/cobro realizado;
-7. buscar errores como:
-   - `#REF!`
-   - `#VALUE!`
-   - `#N/A`
-   - `#ERROR!`
+1. identificar la causa;
+2. comparar contra la fuente;
+3. cuantificar la diferencia;
+4. revisar estados financieros;
+5. no sobrescribir simplemente porque la nueva fórmula parezca más limpia.
 
 ---
 
-# Reglas de seguridad financiera
+# Relación con Real P&L
 
-- `Transacciones` es la fuente de verdad operativa.
-- No duplicar movimientos para registrar pagos o cobros.
-- Actualizar la obligación original cuando se liquide.
-- `Pendiente` no equivale a cash.
-- CxC no equivale a ingreso cobrado.
-- CxP no equivale a gasto bancario realizado.
-- Un grant aprobado no equivale automáticamente a CxC.
-- Una recurrencia futura no equivale automáticamente a una deuda devengada.
-- No inventar país, banco, responsable, vencimiento o cuenta.
-- No inventar movimientos para cuadrar una conciliación.
-- No modificar históricos provenientes de archivos fuente sin autorización.
-- Si GitHub y el Google Sheet difieren, prevalece el Google Sheet vivo.
+CxC/CxP no deben determinar directamente los ingresos/gastos del P&L.
+
+La dirección correcta es principalmente:
+
+`Operative incomes`
+→ ingresos P&L
+→ CxC
+
+`Real S&A`
+→ gastos P&L
+→ CxP
+
+`Sueldos 2026`
+→ salarios P&L
+→ CxP Sueldos
+
+No invertir esa lógica.
+
+---
+
+# Relación con Balance Sheet
+
+Los saldos finales alimentan principalmente:
+
+## Activos
+
+- CxC clientes
+- grants por cobrar cuando corresponda
+
+## Pasivos
+
+- CxP proveedores
+- CxP Sueldos
+- otras obligaciones específicas
+
+Antes de modificar un saldo histórico:
+
+revisar el impacto en Balance Sheet.
+
+---
+
+# Relación con Cash Flow
+
+Cash Flow utiliza principalmente:
+
+- cambios de CxC;
+- cambios de CxP;
+- cambios de CxP Sueldos;
+- cobros de grants;
+- pagos.
+
+Por ello una modificación en esta skill puede afectar directamente Cash Flow.
+
+Después de cambios materiales comprobar:
+
+`Cash Flow vs Balance Sheet`
+
+---
+
+# Validaciones antes de modificar CxC
+
+- leer `Operative incomes`;
+- leer el bloque correspondiente de `CxC Mensual`;
+- revisar cobros en `Transacciones`;
+- revisar saldo anterior;
+- comprobar cliente/grant;
+- comprobar mes;
+- revisar vencimiento;
+- buscar duplicados.
+
+---
+
+# Validaciones antes de modificar CxP
+
+- leer `Real S&A`;
+- leer `CxP Mensual`;
+- revisar pagos en `Transacciones`;
+- revisar saldo anterior;
+- comprobar proveedor/concepto;
+- comprobar mes;
+- revisar cutoff;
+- revisar posibles pagos agrupados.
+
+---
+
+# Validaciones antes de modificar CxP Sueldos
+
+- leer `Sueldos 2026`;
+- leer `CxP Sueldos`;
+- revisar pago/adelanto;
+- revisar saldo anterior;
+- conservar precisión;
+- comparar contra histórico validado si el periodo está cerrado.
+
+---
+
+# QA posterior
+
+Después de cualquier modificación material:
+
+1. releer las celdas modificadas;
+2. comprobar monto/devengo;
+3. comprobar pago/cobro;
+4. comprobar saldo;
+5. comprobar roll-forward;
+6. revisar `Balance Sheet`;
+7. revisar `Cash Flow`;
+8. revisar `Dashboard`;
+9. comprobar checks del modelo.
+
+Buscar:
+
+- `#REF!`
+- `#VALUE!`
+- `#N/A`
+- `#DIV/0!`
+- `#ERROR!`
+
+---
+
+# Regla de reconciliación
+
+Nunca considerar correcta una modificación únicamente porque el saldo final coincida.
+
+Debe verificarse también:
+
+- fuente del devengo;
+- fuente del cash;
+- periodo;
+- signo;
+- saldo anterior;
+- trazabilidad.
+
+Un saldo correcto obtenido con una fórmula incorrecta sigue siendo un error.
+
+---
+
+# Guardrails
+
+- No confundir devengo con cash.
+- No crear CxC solo porque exista un Ingreso Pendiente.
+- No crear CxP solo porque exista un Egreso Pendiente.
+- No mover ingresos/gastos al mes del cobro/pago.
+- No duplicar obligaciones al liquidarlas.
+- No inventar vencimientos.
+- No inventar pagos/cobros.
+- No inventar TC.
+- No hardcodear saldos para cuadrar.
+- No modificar históricos reconciliados sin revisión.
+- No eliminar excepciones de cutoff sin entenderlas.
+- No redondear valores fuente innecesariamente.
+- No usar CxC/CxP para cuadrar Balance Sheet artificialmente.
+
+---
+
+# Regla de finalización
+
+Una tarea de CxC/CxP solamente está terminada cuando:
+
+- devengo correcto;
+- cash correcto;
+- saldo correcto;
+- roll-forward correcto;
+- Balance Sheet consistente;
+- Cash Flow consistente;
+- checks correctos;
+- celdas modificadas releídas en vivo.
+
+Nunca reportar “listo” solamente porque se ejecutó una escritura.
 
 ---
 
 # Coordinación con otras skills
 
-Usar `finanzas-config-categorizacion` para:
+## `finanzas-config-categorizacion`
 
-- Config
-- catálogos
-- validaciones
-- reglas automáticas de categorización
+Usar para:
 
-Usar `finanzas-transacciones-tc` para:
+- categorías;
+- catálogos;
+- reglas de categorización.
 
-- importación de extractos
-- registro de movimientos
-- TC
-- transferencias internas
-- conversión a USD
+## `finanzas-transacciones-tc`
 
-Usar `finanzas-presupuesto-bancos` para:
+Usar para:
 
-- presupuesto
-- conciliación bancaria
-- cierre mensual
-- diferencias bancarias
+- extractos;
+- movimientos bancarios;
+- TC;
+- cash;
+- transferencias;
+- conciliación a nivel transacción.
 
-Usar `finanzas-runway-dashboard` para:
+## `finanzas-presupuesto-bancos`
 
-- cash
-- burn
-- runway
-- proyecciones
-- KPIs ejecutivos
+Usar para:
 
-Esta skill debe concentrarse en:
+- Bancos;
+- presupuesto;
+- Budget vs P&L;
+- conciliación consolidada.
 
-- obligaciones pendientes;
-- cuentas por cobrar;
-- cuentas por pagar;
-- vencimientos;
-- grants;
-- pagos recurrentes;
-- sueldos por pagar;
-- liquidación de obligaciones.
+## `finanzas-runway-dashboard`
+
+Usar para:
+
+- runway;
+- próximos cobros/pagos;
+- KPIs;
+- Dashboard.
+
+## `finanzas-estados-financieros`
+
+Cuando exista, usar para:
+
+- Real P&L;
+- Cash Flow;
+- Balance Sheet;
+- checks de tres estados.
+
+## `finanzas-cierre-mensual`
+
+Cuando exista, usar para:
+
+- cierre mensual completo;
+- validación de CxC/CxP;
+- estado final `✓ CERRADO`.
+
+---
+
+# Referencias
+
+Consultar cuando corresponda:
+
+- `references/accounts-receivable.md`
+- `references/accounts-payable.md`
+- `references/estado-pagos.md`
+
+---
+
+# Alcance final
+
+Esta skill debe responder principalmente:
+
+**¿cuánto se devengó, cuánto se cobró/pagó y cuánto sigue pendiente?**
+
+Su objetivo es mantener el capital de trabajo de Sommos:
+
+- correcto;
+- trazable;
+- reconciliado;
+- consistente con P&L;
+- consistente con Balance Sheet;
+- consistente con Cash Flow.
