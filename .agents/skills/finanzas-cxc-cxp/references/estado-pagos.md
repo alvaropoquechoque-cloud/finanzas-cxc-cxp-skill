@@ -1,191 +1,382 @@
-# Estado de pagos y cobros
+# Finanzas Sommos — Estado de pagos y cobros
 
 ## Propósito
 
-Definir cómo se interpreta y actualiza el estado financiero de una transacción desde su registro hasta su conciliación bancaria.
+Documentar cómo interpretar:
 
-La fuente de verdad es `Transacciones`.
+- Pendiente;
+- Pagado/Cobrado;
+- vencido;
+- pagos parciales;
+- cobros parciales;
+- fecha real de liquidación.
 
----
+Este documento no representa una pestaña llamada `Estado de pagos`.
 
-## Estados principales
+La antigua pestaña `Estado de pagos` fue eliminada del Google Sheet por ser redundante.
 
-### Pendiente
+La información vive principalmente en:
 
-La obligación o derecho de cobro existe, pero todavía no se ha realizado financieramente.
-
-Ejemplos:
-
-- factura de proveedor pendiente de pago;
-- factura de cliente pendiente de cobro;
-- desembolso de grant exigible pero aún no recibido;
-- sueldo devengado pendiente.
-
-Un movimiento `Pendiente`:
-
-- sí puede formar parte de CxC o CxP;
-- sí puede afectar Runway como compromiso futuro;
-- no afecta saldo bancario;
-- no representa ingreso o egreso realizado.
+- `Transacciones`
+- `CxC Mensual`
+- `CxP Mensual`
+- `CxP Sueldos`
 
 ---
 
-### Pagado/Cobrado
+# Principio fundamental
 
-El movimiento ya ocurrió financieramente.
+El estado de pago responde:
 
-Debe existir evidencia suficiente, normalmente:
+**¿ocurrió el cash?**
+
+No responde por sí solo:
+
+**¿cuándo se devengó el ingreso o gasto?**
+
+Mantener siempre separados:
+
+- devengo;
+- vencimiento;
+- liquidación;
+- conciliación.
+
+---
+
+# Pendiente
+
+`Pendiente` significa que el cash todavía no ha sido liquidado según la evidencia disponible.
+
+Puede corresponder a:
+
+- cobro pendiente;
+- pago pendiente;
+- grant pendiente;
+- obligación pendiente.
+
+Pero:
+
+**Pendiente no crea automáticamente CxC o CxP.**
+
+El devengo oficial se determina desde las fuentes contables correspondientes.
+
+---
+
+# Pagado/Cobrado
+
+`Pagado/Cobrado` significa que existe evidencia suficiente de que el cash ocurrió.
+
+Evidencia habitual:
 
 - extracto bancario;
 - comprobante;
 - transferencia confirmada;
 - cargo automático;
-- conciliación equivalente.
+- evidencia equivalente.
 
-Al cambiar un movimiento a `Pagado/Cobrado`, registrar cuando sea posible:
+Al liquidar revisar:
 
-- `Fecha pago / cobro`;
-- cuenta bancaria;
-- conciliación;
-- información de transferencia si corresponde.
-
----
-
-## Vencido
-
-`Vencido` es una condición derivada, no necesariamente un estado manual.
-
-Conceptualmente:
-
-`Pendiente + Fecha vencimiento anterior a hoy = Vencido`
-
-Una obligación vencida sigue siendo `Pendiente` hasta que se pague o cobre.
-
-No cambiarla a `Pagado/Cobrado` únicamente porque pasó la fecha.
+- Fecha pago / cobro;
+- Banco / cuenta;
+- monto;
+- moneda;
+- referencia;
+- conciliación.
 
 ---
 
-## Flujo recomendado
+# Fecha pago / cobro
 
-### Cuenta por pagar
-
-`Egreso + Pendiente`
-→ aparece en `CxP Mensual`
-→ se paga
-→ actualizar transacción original
-→ `Pagado/Cobrado`
-→ registrar fecha real
-→ conciliar banco
-→ desaparece del pendiente futuro.
-
-### Cuenta por cobrar
-
-`Ingreso + Pendiente`
-→ aparece en `CxC Mensual`
-→ se cobra
-→ actualizar transacción original
-→ `Pagado/Cobrado`
-→ registrar fecha real
-→ conciliar banco
-→ desaparece del pendiente futuro.
-
----
-
-## Regla de no duplicación
-
-Nunca crear una segunda transacción únicamente para liquidar una cuenta pendiente existente.
-
-Ejemplo incorrecto:
-
-- Factura BCP: Ingreso + Pendiente
-- luego crear otra fila adicional: Ingreso + Cobrado
-
-Eso duplicaría el ingreso.
-
-Procedimiento correcto:
-
-- localizar la factura original;
-- cambiar su estado;
-- agregar `Fecha pago / cobro`;
-- completar datos bancarios.
-
----
-
-## Conciliación bancaria
-
-Solo movimientos realizados deben afectar `Bancos`.
-
-La conciliación debe comprobar:
-
-`Saldo inicial + Ingresos realizados - Egresos realizados = Saldo final calculado`
-
-Luego comparar contra el saldo real del banco.
-
-Nunca crear movimientos artificiales para hacer que la conciliación llegue a cero.
-
-Si existe diferencia:
-
-1. revisar movimientos faltantes;
-2. revisar duplicados;
-3. revisar transferencias internas;
-4. revisar dirección de transferencia;
-5. revisar fechas;
-6. revisar moneda y TC;
-7. revisar comisiones;
-8. revisar el extracto original.
-
----
-
-## Transferencias internas
-
-Las transferencias entre cuentas propias no son ingreso ni gasto operativo.
-
-Deben identificarse como:
-
-- Tipo relacionado con transferencia interna;
-- Categoría = `Transferencias internas`;
-- Cuenta origen;
-- Cuenta destino.
-
-Una transferencia debe afectar dos cuentas bancarias, pero no debe inflar ingresos, gastos ni burn.
-
----
-
-## Fecha pago / cobro
-
-`Fecha pago / cobro` representa la fecha financiera real de la liquidación.
+Es la fecha efectiva del cash.
 
 No reemplaza:
 
 - fecha de factura;
-- fecha de registro;
+- fecha del devengo;
 - fecha de vencimiento.
 
-Las tres fechas cumplen funciones distintas.
+Ejemplo:
 
-Esta fecha es especialmente importante para:
+factura de julio pagada en agosto:
 
-- conciliación bancaria;
-- Real S&A;
-- Operative incomes;
-- CxC Mensual;
-- CxP Mensual;
-- flujo de caja;
-- futuros estados financieros.
+- devengo → julio
+- vencimiento → según factura
+- cash → agosto
 
 ---
 
-## Controles antes de cerrar
+# Vencido
 
-Antes de considerar una obligación liquidada:
+`Vencido` debe entenderse preferentemente como una condición derivada.
 
-- verificar evidencia bancaria;
-- confirmar monto;
-- confirmar moneda;
-- confirmar cuenta;
-- confirmar fecha;
-- mantener la misma transacción fuente;
-- revisar conciliación;
-- comprobar vistas dependientes.
+Conceptualmente:
 
-Si existe contradicción entre documentación histórica y el Google Sheet actual, prevalece el Google Sheet.
+`Saldo pendiente > 0`
++
+`Fecha vencimiento < hoy`
+→ vencido
+
+Una cuenta vencida sigue pendiente hasta su liquidación.
+
+---
+
+# Cuenta por cobrar
+
+Flujo conceptual:
+
+`Operative incomes`
+→ monto a facturar
+→ `CxC Mensual`
+
+Luego:
+
+`Transacciones`
+→ cobro
+
+Finalmente:
+
+`Saldo CxC = saldo anterior + devengo - cobro`
+
+El estado de pago controla el cash, no el devengo.
+
+---
+
+# Cuenta por pagar
+
+Flujo conceptual:
+
+`Real S&A`
+→ monto a pagar
+→ `CxP Mensual`
+
+Luego:
+
+`Transacciones`
+→ pago
+
+Finalmente:
+
+`Saldo CxP = saldo anterior + devengo - pago`
+
+---
+
+# Sueldos
+
+Flujo:
+
+`Sueldos 2026`
+→ devengo
+
+`CxP Sueldos`
+→ obligación / adelanto / pago / saldo
+
+El pago de nómina no debe generar un segundo gasto.
+
+---
+
+# No duplicación
+
+Cuando un cash claramente liquida una obligación existente:
+
+preferir actualizar la fila/registro existente.
+
+No crear automáticamente:
+
+- factura pendiente;
+- otra fila idéntica cobrada;
+
+si ambas representan el mismo hecho económico.
+
+---
+
+# Excepción: múltiples documentos
+
+Un movimiento bancario puede pagar varias facturas.
+
+En ese caso puede existir más de un componente documental.
+
+No confundir:
+
+`una transferencia bancaria`
+
+con:
+
+`una única obligación`
+
+Caso conocido:
+
+PPO.
+
+---
+
+# Pago parcial
+
+Si una obligación de USD 1,000 recibe un pago de USD 400:
+
+el saldo no es cero.
+
+Conceptualmente:
+
+`Saldo = 1,000 - 400 = 600`
+
+Mantener el saldo restante pendiente.
+
+---
+
+# Cobro parcial
+
+Misma lógica.
+
+No marcar como completamente cobrada una factura mientras quede saldo.
+
+---
+
+# Pagos agrupados
+
+Cuando un pago cubre varias obligaciones:
+
+asignar cada componente según la evidencia disponible.
+
+Comprobar:
+
+`SUMA asignada = pago bancario total`
+
+---
+
+# Conciliación
+
+`Pagado/Cobrado` y `Conciliado` son conceptos diferentes.
+
+Un movimiento puede:
+
+- haber ocurrido;
+- pero aún no estar completamente conciliado.
+
+La conciliación responde:
+
+**¿el registro coincide con el banco?**
+
+El estado de pago responde:
+
+**¿el cash ocurrió?**
+
+---
+
+# Transferencias internas
+
+No constituyen pago de gasto ni cobro de ingreso por sí mismas.
+
+Usar:
+
+`Tipo = Transferencia interna`
+
+y:
+
+`Categoría = Transferencias internas`
+
+No utilizar estado de pago para convertir una transferencia en ingreso/gasto.
+
+---
+
+# Impacto en Bancos
+
+Solo el cash realizado debe afectar el saldo bancario.
+
+Una obligación pendiente no debe disminuir la caja bancaria.
+
+---
+
+# Impacto en Cash Flow
+
+Cash Flow debe utilizar:
+
+- cobros reales;
+- pagos reales;
+- variaciones de CxC/CxP.
+
+No usar exclusivamente el Estado pago para construir el estado financiero completo.
+
+---
+
+# Impacto en Dashboard
+
+El Dashboard puede utilizar estados y vencimientos para mostrar:
+
+- CxC vencida;
+- CxP próxima;
+- cobros próximos 30 días;
+- pagos próximos 30 días;
+- movimientos sin conciliar;
+- cierre mensual.
+
+---
+
+# Mes cerrado
+
+No modificar estados de pagos/cobros de un mes cerrado sin revisar:
+
+- Bancos;
+- CxC/CxP;
+- Cash Flow;
+- Balance Sheet.
+
+Actualmente agosto de 2026 es un periodo validado/cerrado.
+
+---
+
+# QA antes de liquidar
+
+Comprobar:
+
+- obligación correcta;
+- contraparte;
+- monto;
+- moneda;
+- fecha;
+- banco;
+- evidencia;
+- si es pago total o parcial.
+
+---
+
+# QA después de liquidar
+
+Revisar:
+
+- Estado pago;
+- Fecha pago / cobro;
+- conciliación;
+- CxC/CxP;
+- saldo restante;
+- Bancos;
+- Cash Flow;
+- Balance Sheet.
+
+---
+
+# Guardrails
+
+- No marcar Pagado/Cobrado sin evidencia.
+- No considerar vencido como pagado.
+- No duplicar una obligación al liquidarla.
+- No cerrar pagos parciales completamente.
+- No cambiar fecha de devengo por fecha de cash.
+- No usar Estado pago para cuadrar estados financieros.
+- No inventar fecha de liquidación.
+- No inventar banco.
+
+---
+
+# Regla final
+
+Siempre separar estas cuatro preguntas:
+
+**¿Cuándo se devengó?**
+
+**¿Cuándo vencía?**
+
+**¿Cuándo se pagó o cobró?**
+
+**¿Cuándo quedó conciliado?**
+
+Pueden ser cuatro fechas o estados distintos.
