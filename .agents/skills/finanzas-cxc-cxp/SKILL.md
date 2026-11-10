@@ -34,15 +34,15 @@ Esta skill debe preservar siempre esa separación.
 
 Google Sheet:
 
-`Finanzas Sommos — Workflow y Control`
+`Finanzas Sommos — Workflow y Control V2.0`
 
 Spreadsheet ID:
 
-`1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
+`1z0ON-50Ps3V9AYACSZxVBe6sNuAuYxE4qwrV2N5tQZY`
 
 URL:
 
-`https://docs.google.com/spreadsheets/d/1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E/edit`
+`https://docs.google.com/spreadsheets/d/1z0ON-50Ps3V9AYACSZxVBe6sNuAuYxE4qwrV2N5tQZY/edit`
 
 Antes de cualquier modificación:
 
@@ -770,14 +770,21 @@ Usar para:
 - transferencias;
 - conciliación a nivel transacción.
 
-## `finanzas-presupuesto-bancos`
+## `finanzas-bancos-conciliacion`
 
 Usar para:
 
-- Bancos;
+- conciliación consolidada de Bancos;
+- saldos bancarios por cuenta;
+- diferencias y cierre bancario.
+
+## `finanzas-presupuesto-vs`
+
+Usar para:
+
 - presupuesto;
 - Budget vs P&L;
-- conciliación consolidada.
+- análisis de variaciones.
 
 ## `finanzas-runway-dashboard`
 
@@ -790,7 +797,7 @@ Usar para:
 
 ## `finanzas-estados-financieros`
 
-Cuando exista, usar para:
+Usar para:
 
 - Real P&L;
 - Cash Flow;
@@ -799,7 +806,7 @@ Cuando exista, usar para:
 
 ## `finanzas-cierre-mensual`
 
-Cuando exista, usar para:
+Usar para:
 
 - cierre mensual completo;
 - validación de CxC/CxP;
